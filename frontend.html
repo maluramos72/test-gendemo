@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QA Test Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #020817;
+      --surface:   #0f172a;
+      --border:    #1e293b;
+      --border-h:  #334155;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --dim:       #64748b;
+      --dimmer:    #475569;
+      --green:     #22c55e;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+      --blue-l:    #93c5fd;
+      --purple:    #8b5cf6;
+      --cyan:      #06b6d4;
+      --green-l:   #86efac;
+      --mono:      'IBM Plex Mono', 'Fira Code', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
+    }
+
+    html { background: var(--bg); color: var(--text); font-family: var(--mono); }
+
+    body {
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 2px; }
+
+    .wrap { max-width: 820px; margin: 0 auto; }
+
+    /*  Header  */
+    .header { margin-bottom: 32px; }
+    .header-top {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+    .header-badge {
+      font-size: 11px; color: var(--dim);
+      letter-spacing: .12em; text-transform: uppercase;
+    }
+    .header h1 {
+      font-family: var(--sans); font-size: 28px; font-weight: 700;
+      letter-spacing: -.02em; color: var(--text);
+    }
+    .header p {
+      margin-top: 6px; font-size: 13px; color: var(--dim);
+      font-family: var(--sans);
+    }
+
+    /*  Example pills  */
+    .pills-label {
+      font-size: 10px; color: var(--dimmer); letter-spacing: .1em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .pill {
+      padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: var(--dim); font-size: 12px;
+      cursor: pointer; transition: all .15s; font-family: var(--sans);
+    }
+    .pill:hover { border-color: var(--blue); color: var(--blue-l); }
+    .pill.active {
+      border-color: var(--blue); background: rgba(59,130,246,.1); color: var(--blue-l);
+    }
+
+    /*  Input  */
+    .input-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      transition: border-color .2s;
+    }
+    .input-box:focus-within { border-color: var(--border-h); }
+    .input-label {
+      font-size: 10px; color: var(--dimmer); letter-spacing: .1em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    textarea {
+      width: 100%; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 14px; line-height: 1.6; resize: vertical;
+      font-family: var(--sans); min-height: 72px;
+    }
+    textarea::placeholder { color: var(--dimmer); }
+
+    /*  CTA Button  */
+    .btn-generate {
+      width: 100%; padding: 12px 20px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none; border-radius: 10px; cursor: pointer;
+      color: #fff; font-size: 13px; font-weight: 600;
+      letter-spacing: .03em; transition: all .2s;
+      margin-bottom: 24px; font-family: var(--mono);
+    }
+    .btn-generate:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-generate:active:not(:disabled) { transform: scale(.98); }
+    .btn-generate:disabled {
+      background: var(--border); color: var(--dimmer); cursor: not-allowed;
+    }
+
+    /*  Error  */
+    .error-box {
+      background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 20px;
+      font-size: 13px; color: #fca5a5; font-family: var(--sans);
+      display: none;
+    }
+
+    /*  Result header  */
+    .result-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; padding: 12px 16px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    }
+    .result-status {
+      font-size: 10px; color: var(--dimmer);
+      text-transform: uppercase; letter-spacing: .1em;
+    }
+    .stop-ok  { color: var(--green); }
+    .stop-trunc { color: var(--amber); }
+
+    /*  Score badge  */
+    .score-badge { display: flex; align-items: center; gap: 10px; }
+    .score-ring {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .score-inner {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; font-family: var(--mono);
+    }
+    .score-info .score-label-top {
+      font-size: 12px; color: var(--muted); line-height: 1;
+    }
+    .score-info .score-label-bottom {
+      font-size: 13px; font-weight: 600; margin-top: 2px;
+    }
+
+    /*  Repair warning  */
+    .repair-warn {
+      background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2);
+      border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+      font-size: 11px; color: #fbbf24; font-family: var(--sans); line-height: 1.5;
+    }
+
+    /* ─ Pipeline diagram  */
+    .pipeline-box {
+      font-size: 11px; color: var(--dimmer); font-family: var(--sans);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; line-height: 1.6;
+    }
+
+    /*  Test case cards  */
+    .card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; margin-bottom: 8px;
+      transition: border-color .2s;
+      animation: fadeIn .4s ease;
+    }
+    .card:hover { border-color: var(--border-h); }
+
+    .card-header {
+      width: 100%; background: none; border: none; cursor: pointer;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+      text-align: left;
+    }
+    .card-num {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: var(--border); display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 700;
+      color: var(--dim); font-family: var(--mono); flex-shrink: 0;
+    }
+    .card-title {
+      flex: 1; font-size: 13px; font-weight: 600; color: var(--text);
+      font-family: var(--mono);
+    }
+    .card-chevron {
+      color: var(--dimmer); font-size: 12px;
+      transition: transform .2s; display: inline-block;
+    }
+    .card-chevron.open { transform: rotate(180deg); }
+
+    .card-body {
+      padding: 0 16px 16px; border-top: 1px solid var(--border);
+      display: none;
+    }
+    .card-body.open { display: block; }
+
+    .field-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      color: var(--dim); text-transform: uppercase; margin-bottom: 5px;
+    }
+    .field-block {
+      margin-top: 12px;
+    }
+    .precond-text {
+      font-size: 13px; color: var(--muted); line-height: 1.5;
+      background: var(--border); border-radius: 6px; padding: 8px 10px;
+      font-family: var(--sans);
+    }
+    .steps-list { list-style: none; }
+    .step-item {
+      display: flex; gap: 10px; margin-bottom: 6px; align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px;
+      background: var(--border); border: 1px solid var(--border-h);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--dim); font-weight: 700;
+      font-family: var(--mono); margin-top: 1px;
+    }
+    .step-text {
+      font-size: 13px; color: #cbd5e1; line-height: 1.5;
+      font-family: var(--sans);
+    }
+    .expected-text {
+      font-size: 13px; color: var(--green-l); line-height: 1.5;
+      background: rgba(34,197,94,.06);
+      border: 1px solid rgba(34,197,94,.15);
+      border-radius: 6px; padding: 8px 10px;
+      font-family: var(--sans);
+    }
+
+    /*  JSON raw viewer  */
+    details { margin-top: 12px; }
+    summary {
+      font-size: 11px; color: var(--dimmer); cursor: pointer;
+      letter-spacing: .08em; text-transform: uppercase;
+      user-select: none; padding: 8px 0;
+    }
+    summary:hover { color: var(--muted); }
+    pre {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; font-size: 11px; color: var(--dim);
+      overflow: auto; margin-top: 8px; max-height: 320px;
+      font-family: var(--mono);
+    }
+
+    /*  Architecture diagram (empty state)  */
+    .arch-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; font-family: var(--sans);
+    }
+    .arch-title {
+      font-size: 12px; color: var(--dimmer); margin-bottom: 16px;
+      letter-spacing: .08em; text-transform: uppercase; text-align: center;
+    }
+    .arch-flow {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 6px;
+    }
+    .arch-node {
+      background: var(--bg); border-radius: 8px;
+      padding: 8px 14px; text-align: center;
+    }
+    .arch-node-label { font-size: 12px; font-weight: 600; }
+    .arch-node-sub { font-size: 10px; color: var(--dimmer); margin-top: 2px; }
+    .arch-arrow { color: var(--border-h); font-size: 18px; }
+    .arch-desc {
+      margin-top: 20px; font-size: 12px; color: var(--dimmer);
+      text-align: center; max-width: 480px; margin-left: auto; margin-right: auto;
+      line-height: 1.6;
+    }
+
+    /*  Loading spinner  */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid var(--dimmer); border-top-color: var(--blue-l);
+      border-radius: 50%; animation: spin .7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+
+    /*  Animations  */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes fadeIn {
+      from { opacity:0; transform: translateY(8px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /*  Result section  */
+    #result-section { display: none; animation: fadeIn .4s ease; }
+    #empty-section  { display: block; }
+    #error-box      { display: none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="pulse-dot"></div>
+      <span class="header-badge">POST /api/v1/generate-tests · Microservice Demo</span>
+    </div>
+    <h1>QA Test - Demo</h1>
+    <p>Transforma historias de usuario en casos de prueba estructurados.</p>
+  </div>
+
+  <!-- Example pills -->
+  <div class="pills-label">Ejemplos de historias de usuario</div>
+  <div class="pills" id="pills"></div>
+
+  <!-- Input -->
+  <div class="input-box">
+    <div class="input-label">user_story</div>
+    <textarea id="story-input" rows="3" placeholder="Como usuario quiero..."></textarea>
+  </div>
+
+  <!-- CTA -->
+  <button class="btn-generate" id="btn-generate">▶&nbsp;&nbsp;Generar casos de prueba</button>
+
+  <!-- Error -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- Result -->
+  <div id="result-section">
+    <div class="result-header">
+      <div class="result-status" id="result-status"></div>
+      <div class="score-badge" id="score-badge"></div>
+    </div>
+    <div class="repair-warn" id="repair-warn" style="display:none">
+      Warning!! Respuesta truncada por límite de tokens — JSON reparado automáticamente. Los últimos casos pueden estar incompletos.
+    </div>
+    <div class="pipeline-box" id="pipeline-box"></div>
+    <div id="cards-container"></div>
+    <details>
+      <summary>Ver JSON raw de respuesta</summary>
+      <pre id="raw-json"></pre>
+    </details>
+  </div>
+
+  <!-- Empty state / Architecture -->
+  <div id="empty-section">
+    <div class="arch-box">
+      <div class="arch-title">Flujo del microservicio</div>
+      <div class="arch-flow" id="arch-flow"></div>
+      <p class="arch-desc">
+        El prompt no tiene lógica hardcodeada para ningún dominio.
+        El LLM adapta vocabulario, acciones y validaciones al contexto de cada historia de usuario.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Config 
+  const API_BASE = "http://127.0.0.1:8000/api/v1";
+
+  const EXAMPLES = [
+    { label: "🔑 Recuperar contraseña", story: "Como usuario quiero recuperar mi contraseña para poder acceder nuevamente al sistema." },
+    { label: "🛒 Carrito de compras",   story: "Como cliente quiero agregar productos a mi carrito para poder comprarlos más tarde." },
+    { label: "📁 Subir archivos",       story: "Como usuario quiero subir documentos PDF a mi perfil para tener mis archivos disponibles en la nube." },
+    { label: "🔔 Notificaciones",       story: "Como usuario quiero recibir notificaciones push cuando hay una nueva oferta disponible." },
+    { label: "💳 Pago con tarjeta",     story: "Como cliente quiero pagar mi orden con tarjeta de crédito para completar mi compra de forma segura." },
+  ];
+
+  const ARCH_NODES = [
+    { label: "User Story",        sub: "POST body",         color: "#3b82f6" }, { arrow: true },
+    { label: "Prompt genérico",   sub: "sin hardcoding",    color: "#8b5cf6" }, { arrow: true },
+    { label: "LLM",               sub: "max_tokens: 2048",  color: "#06b6d4" }, { arrow: true },
+    { label: "Validate + Repair", sub: "stop_reason check", color: "#f59e0b" }, { arrow: true },
+    { label: "Quality Score",     sub: "heurístico 5-dim",  color: "#22c55e" },
+  ];
+
+  //  State 
+  let currentStory = EXAMPLES[0].story;
+  let loading = false;
+
+  //  Init 
+  buildPills();
+  buildArch();
+  document.getElementById("story-input").value = currentStory;
+  document.querySelector('.pill').classList.add('active');
+
+  //  Pills 
+  function buildPills() {
+    const container = document.getElementById("pills");
+    EXAMPLES.forEach((ex, i) => {
+      const btn = document.createElement("button");
+      btn.className = "pill";
+      btn.textContent = ex.label;
+      btn.addEventListener("click", () => {
+        currentStory = ex.story;
+        document.getElementById("story-input").value = ex.story;
+        document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        resetResult();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  document.getElementById("story-input").addEventListener("input", e => {
+    currentStory = e.target.value;
+    document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    resetResult();
+  });
+
+  //  Architectura 
+  function buildArch() {
+    const flow = document.getElementById("arch-flow");
+    ARCH_NODES.forEach(node => {
+      if (node.arrow) {
+        const span = document.createElement("span");
+        span.className = "arch-arrow";
+        span.textContent = "→";
+        flow.appendChild(span);
+      } else {
+        const div = document.createElement("div");
+        div.className = "arch-node";
+        div.style.border = `1px solid ${node.color}33`;
+        div.innerHTML = `
+          <div class="arch-node-label" style="color:${node.color}">${node.label}</div>
+          <div class="arch-node-sub">${node.sub}</div>`;
+        flow.appendChild(div);
+      }
+    });
+  }
+
+  //  Generate 
+  document.getElementById("btn-generate").addEventListener("click", generate);
+
+  async function generate() {
+    const story = document.getElementById("story-input").value.trim();
+    if (!story || loading) return;
+
+    loading = true;
+    setLoading(true);
+    resetResult();
+    hideError();
+
+    try {
+      const res = await fetch(`${API_BASE}/generate-tests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_story: story }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || `Error HTTP ${res.status}`);
+      }
+
+      renderResult(data);
+
+    } catch (err) {
+      showError(err.message || "Error de conexión. ¿El backend está corriendo?");
+    } finally {
+      loading = false;
+      setLoading(false);
+    }
+  }
+
+  //  Render result 
+  function renderResult(data) {
+    const { test_cases, quality, meta } = data;
+
+    // Status bar
+    const stopColor = meta.stop_reason === "length" ? "stop-trunc" : "stop-ok";
+    document.getElementById("result-status").innerHTML =
+      `200 OK · ${test_cases.length} test cases · stop_reason: <span class="${stopColor}">${meta.stop_reason}</span>`;
+
+    // Score badge
+    renderScore(quality.score);
+
+    // Repair warning
+    document.getElementById("repair-warn").style.display = meta.was_repaired ? "block" : "none";
+
+    // Pipeline
+    const pipelineRepair = meta.was_repaired
+      ? `<span style="color:var(--amber)">JSON reparado (truncado)</span>`
+      : `<span style="color:var(--green-l)">JSON válido</span>`;
+    document.getElementById("pipeline-box").innerHTML =
+      `Pipeline: Historia → <span style="color:var(--blue-l)">LLM (prompt genérico)</span> → ${pipelineRepair} → <span style="color:var(--amber)">quality score: ${quality.score}</span> → respuesta`;
+
+    // Cards
+    const container = document.getElementById("cards-container");
+    container.innerHTML = "";
+    test_cases.forEach((tc, i) => container.appendChild(buildCard(tc, i)));
+
+    // Raw JSON
+    document.getElementById("raw-json").textContent = JSON.stringify(data, null, 2);
+
+    // Show / hide sections
+    document.getElementById("result-section").style.display = "block";
+    document.getElementById("empty-section").style.display = "none";
+  }
+
+  function renderScore(score) {
+    const pct   = Math.round(score * 100);
+    const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
+    const label = pct >= 75 ? "Alta calidad" : pct >= 50 ? "Calidad media" : "Mejorable";
+    const deg   = pct * 3.6;
+
+    document.getElementById("score-badge").innerHTML = `
+      <div class="score-ring" style="background: conic-gradient(${color} ${deg}deg, #1e293b ${deg}deg)">
+        <div class="score-inner" style="color:${color}">${pct}%</div>
+      </div>
+      <div class="score-info">
+        <div class="score-label-top">Quality Score</div>
+        <div class="score-label-bottom" style="color:${color}">${label}</div>
+      </div>`;
+  }
+
+  function buildCard(tc, index) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const isOpen = index === 0;
+
+    card.innerHTML = `
+      <button class="card-header">
+        <span class="card-num">${index + 1}</span>
+        <span class="card-title">${tc.title}</span>
+        <span class="card-chevron ${isOpen ? 'open' : ''}">▾</span>
+      </button>
+      <div class="card-body ${isOpen ? 'open' : ''}">
+        <div class="field-block">
+          <div class="field-label">Precondiciones</div>
+          <div class="precond-text">${tc.preconditions}</div>
+        </div>
+        <div class="field-block">
+          <div class="field-label">Pasos</div>
+          <ol class="steps-list">${tc.steps.map((s, i) => `
+            <li class="step-item">
+              <span class="step-num">${i + 1}</span>
+              <span class="step-text">${s}</span>
+            </li>`).join("")}
+          </ol>
+        </div>
+        <div class="field-block">
+          <div class="field-label">Resultado esperado</div>
+          <div class="expected-text">${tc.expected_result}</div>
+        </div>
+      </div>`;
+
+    const btn     = card.querySelector(".card-header");
+    const body    = card.querySelector(".card-body");
+    const chevron = card.querySelector(".card-chevron");
+
+    btn.addEventListener("click", () => {
+      const open = body.classList.toggle("open");
+      chevron.classList.toggle("open", open);
+    });
+
+    return card;
+  }
+
+  //  Helpers 
+  function setLoading(on) {
+    const btn = document.getElementById("btn-generate");
+    btn.disabled = on;
+    btn.innerHTML = on
+      ? `<span class="spinner"></span>Generando casos de prueba…`
+      : "▶&nbsp;&nbsp;Generar casos de prueba";
+  }
+
+  function resetResult() {
+    document.getElementById("result-section").style.display = "none";
+    document.getElementById("empty-section").style.display = "block";
+    hideError();
+  }
+
+  function showError(msg) {
+    const box = document.getElementById("error-box");
+    box.style.display = "block";
+    box.innerHTML = `<strong>Error:</strong> ${msg}`;
+    document.getElementById("result-section").style.display = "none";
+    document.getElementById("empty-section").style.display = "block";
+  }
+
+  function hideError() {
+    document.getElementById("error-box").style.display = "none";
+  }
+</script>
+</body>
+</html>

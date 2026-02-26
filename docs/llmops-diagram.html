@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLMOps Diagram — QA GenDemo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Syne+Mono&display=swap');
+
+  :root {
+    --bg:       #04080f;
+    --surface:  #080e1a;
+    --border:   #0e1e35;
+    --border2:  #162640;
+    --text:     #c8d8f0;
+    --muted:    #3d5470;
+    --muted2:   #253a56;
+
+    --input:    #3b82f6;
+    --prompt:   #8b5cf6;
+    --llm:      #06b6d4;
+    --validate: #f59e0b;
+    --repair:   #ef4444;
+    --score:    #22c55e;
+    --obs:      #e879f9;
+    --orch:     #f97316;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 44px 36px 64px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 22px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: #e8f0ff;
+  }
+  .header p {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Syne Mono', monospace;
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .dot-green { width: 7px; height: 7px; border-radius: 50%; background: var(--score); box-shadow: 0 0 8px var(--score); }
+
+  /* ── Canvas grid ── */
+  .canvas {
+    display: grid;
+    grid-template-columns: 155px 1fr 165px;
+    gap: 0;
+  }
+
+  /* ── Rails ── */
+  .rail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 6px;
+  }
+  .rail-left  { padding-right: 18px; border-right: 1px solid var(--border); }
+  .rail-right { padding-left: 18px;  border-left:  1px solid var(--border); }
+
+  .rail-label {
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .side-node {
+    border-radius: 8px;
+    padding: 9px 11px;
+    border: 1px solid;
+  }
+  .side-node .sn-title {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .side-node .sn-body {
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    line-height: 1.55;
+    opacity: 0.6;
+  }
+
+  /* ── Pipeline ── */
+  .pipeline {
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Node box ── */
+  .node {
+    border-radius: 11px;
+    padding: 13px 16px;
+    border: 1px solid;
+    position: relative;
+  }
+  .node-num {
+    position: absolute;
+    top: -10px;
+    left: 14px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid;
+  }
+  .node-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+    padding-top: 2px;
+  }
+  .node-body {
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    line-height: 1.65;
+    opacity: 0.65;
+  }
+  .node-file {
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    margin-top: 7px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  /* ── Arrow ── */
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    position: relative;
+  }
+  .arrow::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border2);
+  }
+  .arrow-tag {
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    padding: 2px 9px;
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Fork arrow (two tags) ── */
+  .arrow-fork {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    position: relative;
+    gap: 8px;
+  }
+  .arrow-fork::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border2);
+  }
+
+  /* ── Score table ── */
+  .score-section {
+    margin-top: 36px;
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title span {
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+  }
+
+  .score-table {
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .score-thead {
+    display: grid;
+    grid-template-columns: 1.4fr 0.6fr 1.4fr 1.6fr;
+    background: #0a1628;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border2);
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    gap: 12px;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.6fr 1.4fr 1.6fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 12px;
+  }
+  .score-row:last-child { border-bottom: none; }
+  .dim-name { font-size: 12px; font-weight: 700; }
+  .dim-peso { font-family: 'Syne Mono', monospace; font-size: 11px; color: var(--muted); }
+  .dim-formula { font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .dim-penalty { font-size: 11px; color: var(--muted); font-family: 'Syne', sans-serif; line-height: 1.4; }
+
+  /* ── Retry boxes ── */
+  .retry-section { margin-top: 28px; }
+  .retry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .retry-box { border: 1px solid; border-radius: 12px; padding: 16px 18px; }
+  .retry-box-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .rdot { width: 6px; height: 6px; border-radius: 50%; }
+  .trigger { font-family: 'Syne Mono', monospace; font-size: 10px; line-height: 1.85; color: var(--muted); }
+  .trigger b { color: var(--text); font-weight: 400; }
+  .trigger .action { font-weight: 700; }
+  .backoff-box {
+    margin-top: 10px; padding: 8px 10px;
+    background: var(--bg); border-radius: 7px;
+    font-family: 'Syne Mono', monospace; font-size: 10px;
+  }
+
+  /* ── Repair algo ── */
+  .repair-box {
+    margin-top: 12px;
+    border: 1px solid #ef444430;
+    background: #ef44440a;
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .repair-title {
+    font-size: 11px; font-weight: 700; color: var(--repair);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;
+  }
+  .repair-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .repair-step {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--bg); border-radius: 7px; padding: 7px 9px;
+  }
+  .rs-num {
+    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+    background: #ef444418; border: 1px solid #ef444430;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--repair); font-weight: 700; font-family: 'Syne Mono', monospace;
+  }
+  .rs-text { font-size: 10px; color: var(--muted); line-height: 1.4; }
+  .rs-text b { color: var(--text); font-weight: 600; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    margin-top: 32px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted);
+  }
+  .ldot { width: 8px; height: 8px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>LLMOps Pipeline<br>QA Test Generator</h1>
+    <p>Test-GenDemo · FastAPI · OpenAI SDK · Pydantic v2 · structlog</p>
+  </div>
+  <div class="badge">
+    <div class="dot-green"></div>
+    stateless microservice · v2
+  </div>
+</div>
+
+<!-- Main canvas -->
+<div class="canvas">
+
+  <!-- Left rail -->
+  <div class="rail rail-left">
+    <div class="rail-label">Entrada &amp; Config</div>
+
+    <div class="side-node" style="border-color:#3b82f650;background:#3b82f608;color:var(--input)">
+      <div class="sn-title">Cliente HTTP</div>
+      <div class="sn-body">POST /api/v1/<br>generate-tests<br>{ user_story }</div>
+    </div>
+
+    <div class="side-node" style="border-color:#8b5cf630;background:#8b5cf608;color:#c4b5fd;margin-top:6px">
+      <div class="sn-title">config.py</div>
+      <div class="sn-body">pydantic-settings<br>OPENAI_API_KEY<br>LLM_MODEL<br>max_tokens=2048<br>temperature=0.3<br>MAX_RETRIES=3</div>
+    </div>
+
+    <div class="side-node" style="border-color:#e879f930;background:#e879f908;color:#f0abfc;margin-top:6px">
+      <div class="sn-title">logger.py</div>
+      <div class="sn-body">structlog<br>JSON (prod)<br>pretty (dev)<br>request_id<br>duration_ms</div>
+    </div>
+
+    <div class="side-node" style="border-color:#8b5cf630;background:#8b5cf608;color:#c4b5fd;margin-top:6px">
+      <div class="sn-title">prompts.py</div>
+      <div class="sn-body">system prompt<br>genérico<br>sin hardcoding<br>de dominio</div>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline">
+
+    <!-- 1. API Layer -->
+    <div class="node" style="border-color:#3b82f640;background:#3b82f608;margin-top:6px">
+      <div class="node-num" style="background:#3b82f618;border-color:#3b82f640;color:var(--input)">①</div>
+      <div class="node-title" style="color:var(--input)">API Layer — Validación de entrada</div>
+      <div class="node-body">
+        Pydantic v2 valida UserStoryRequest · min_length=10 · max_length=2000<br>
+        dependencies.py inyecta GeneratorService (singleton — reutiliza connection pool)<br>
+        Error mapping: ValidationError → 422 · LLMError → 503
+      </div>
+      <div class="node-file" style="background:#3b82f615;color:var(--input)">api/routes.py · api/dependencies.py · core/models.py</div>
+    </div>
+
+    <div class="arrow">
+      <div class="arrow-tag" style="background:var(--surface);border:1px solid var(--border2);color:var(--muted)">UserStoryRequest validado</div>
+    </div>
+
+    <!-- 2. Orchestrator -->
+    <div class="node" style="border-color:#f9731640;background:#f9731608">
+      <div class="node-num" style="background:#f9731618;border-color:#f9731640;color:var(--orch)">②</div>
+      <div class="node-title" style="color:var(--orch)">Orchestrator — Retry Layer 2 (estructural)</div>
+      <div class="node-body">
+        Loop hasta MAX_RETRIES=3 · llama LLMClient → pasa a Validator<br>
+        ValueError de validate_structure() → reintenta LLM call completo<br>
+        LLMError (no recuperable) → propaga como HTTP 503
+      </div>
+      <div class="node-file" style="background:#f9731615;color:var(--orch)">services/generator.py</div>
+    </div>
+
+    <div class="arrow">
+      <div class="arrow-tag" style="background:var(--surface);border:1px solid var(--border2);color:var(--muted)">invoca con user_story</div>
+    </div>
+
+    <!-- 3. LLM Client -->
+    <div class="node" style="border-color:#06b6d450;background:#06b6d40a;border-width:1.5px">
+      <div class="node-num" style="background:#06b6d418;border-color:#06b6d440;color:var(--llm)">③</div>
+      <div class="node-title" style="color:var(--llm)">LLM Client — Retry Layer 1 (transporte)</div>
+      <div class="node-body">
+        model: gpt-4o-mini · temperature: 0.3 · max_tokens: 2048 · top_p: 0.95<br>
+        response_format: json_object → fuerza JSON válido a nivel API<br>
+        Detecta stop_reason: "length" → activa repair antes de parse<br>
+        Backoff: min(2^n + jitter, 30s) · timeout: LLM_TIMEOUT_SECONDS
+      </div>
+      <div class="node-file" style="background:#06b6d415;color:var(--llm)">services/llm_client.py · core/prompts.py</div>
+    </div>
+
+    <!-- Fork -->
+    <div class="arrow-fork">
+      <div class="arrow-tag" style="background:#0a1628;border:1px solid #f59e0b40;color:var(--validate);font-size:9px">stop_reason=length → repair</div>
+      <div class="arrow-tag" style="background:#0a1628;border:1px solid #06b6d440;color:var(--llm);font-size:9px">stop_reason=stop → parse</div>
+    </div>
+
+    <!-- 4. Validator + Repair -->
+    <div class="node" style="border-color:#ef444435;background:#ef44440a">
+      <div class="node-num" style="background:#ef444418;border-color:#ef444430;color:var(--repair)">④</div>
+      <div class="node-title" style="color:var(--repair)">Validator + JSON Repair</div>
+      <div class="node-body">
+        repair_truncated_json(): 9 pasos · strip backticks → fast path → strip open string<br>
+        → strip key sin valor → strip trailing commas → contar { [ → cerrar ] } → parse<br>
+        validate_structure(): hard gate · claves requeridas · tipos · lista no vacía
+      </div>
+      <div class="node-file" style="background:#ef444415;color:var(--repair)">services/validator.py</div>
+    </div>
+
+    <div class="arrow">
+      <div class="arrow-tag" style="background:var(--surface);border:1px solid var(--border2);color:var(--muted)">list[TestCase] · o ValueError → retry L2</div>
+    </div>
+
+    <!-- 5. Quality Scorer -->
+    <div class="node" style="border-color:#22c55e40;background:#22c55e08">
+      <div class="node-num" style="background:#22c55e18;border-color:#22c55e40;color:var(--score)">⑤</div>
+      <div class="node-title" style="color:var(--score)">Quality Scorer — 5 dimensiones heurísticas</div>
+      <div class="node-body">
+        Costo LLM extra: $0.00 · latencia añadida: ~0ms · no bloquea respuesta<br>
+        cantidad(0.20) · steps_depth(0.25) · preconditions(0.20) · expected_results(0.20) · diversity(0.15)<br>
+        Retorna score∈[0.0,1.0] + label: "Alta calidad" / "Calidad media" / "Mejorable"
+      </div>
+      <div class="node-file" style="background:#22c55e15;color:var(--score)">services/scorer.py</div>
+    </div>
+
+    <div class="arrow">
+      <div class="arrow-tag" style="background:var(--surface);border:1px solid var(--border2);color:var(--muted)">GenerateResponse</div>
+    </div>
+
+    <!-- 6. HTTP Response -->
+    <div class="node" style="border-color:#64748b35;background:#64748b08">
+      <div class="node-num" style="background:#64748b18;border-color:#64748b35;color:#94a3b8">⑥</div>
+      <div class="node-title" style="color:#94a3b8">HTTP Response</div>
+      <div class="node-body">
+        200 OK: { test_cases, quality.{ score, label, dimensions }, meta.{ model, stop_reason, was_repaired, attempts } }<br>
+        503 Service Unavailable si LLMError o retries agotados · 422 Unprocessable si validación falla
+      </div>
+      <div class="node-file" style="background:#64748b15;color:#94a3b8">api/routes.py · core/models.py</div>
+    </div>
+
+  </div><!-- /pipeline -->
+
+  <!-- Right rail -->
+  <div class="rail rail-right">
+    <div class="rail-label">Observabilidad</div>
+
+    <div class="side-node" style="border-color:#e879f930;background:#e879f908;color:#f0abfc">
+      <div class="sn-title">Logs (structlog)</div>
+      <div class="sn-body">request_id<br>method + path<br>status_code<br>duration_ms<br>attempt=N<br>stop_reason<br>prompt_tokens<br>completion_tokens</div>
+    </div>
+
+    <div class="side-node" style="border-color:#e879f930;background:#e879f908;color:#f0abfc;margin-top:8px">
+      <div class="sn-title">meta fields</div>
+      <div class="sn-body">model: str<br>stop_reason: str<br>was_repaired: bool<br>attempts: int<br>pipeline: str</div>
+    </div>
+
+    <div class="side-node" style="border-color:#22c55e20;background:#22c55e05;color:var(--score);margin-top:8px">
+      <div class="sn-title">GET /health</div>
+      <div class="sn-body">status: healthy<br>env + version</div>
+    </div>
+
+    <div class="side-node" style="border-color:#3b82f630;background:#3b82f608;color:#93c5fd;margin-top:8px">
+      <div class="sn-title">GET /examples</div>
+      <div class="sn-body">5 historias<br>de ejemplo<br>por dominio</div>
+    </div>
+
+    <div class="side-node" style="border-color:var(--border2);background:var(--surface);margin-top:8px">
+      <div class="sn-title" style="color:var(--text)">Error codes</div>
+      <div class="sn-body">422 → input<br>503 → LLM<br>504 → timeout<br>502 → parse</div>
+    </div>
+  </div>
+
+</div><!-- /canvas -->
+
+<!-- Scoring breakdown -->
+<div class="score-section">
+  <div class="section-title" style="color:var(--score)">
+    <span style="background:var(--score)"></span>
+    ⑤ Scoring heurístico — dimensiones y pesos
+  </div>
+  <div class="score-table">
+    <div class="score-thead">
+      <div>Dimensión</div>
+      <div>Peso</div>
+      <div>Fórmula</div>
+      <div>Penaliza cuando</div>
+    </div>
+    <div class="score-row">
+      <div class="dim-name" style="color:var(--input)">Cantidad</div>
+      <div class="dim-peso">× 0.20</div>
+      <div class="dim-formula">min(n / 3, 1.0)</div>
+      <div class="dim-penalty">Menos de 3 casos generados</div>
+    </div>
+    <div class="score-row">
+      <div class="dim-name" style="color:var(--llm)">Profundidad de pasos</div>
+      <div class="dim-peso">× 0.25</div>
+      <div class="dim-formula">avg(min(steps/3, 1.0))</div>
+      <div class="dim-penalty">1 paso→0.33 · 2 pasos→0.67 · 3+→1.0</div>
+    </div>
+    <div class="score-row">
+      <div class="dim-name" style="color:var(--prompt)">Precondiciones</div>
+      <div class="dim-peso">× 0.20</div>
+      <div class="dim-formula">regex + len &gt; 20</div>
+      <div class="dim-penalty">"the user is logged in" → 0.2</div>
+    </div>
+    <div class="score-row">
+      <div class="dim-name" style="color:var(--validate)">Resultados esperados</div>
+      <div class="dim-peso">× 0.20</div>
+      <div class="dim-formula">count(palabras vagas)</div>
+      <div class="dim-penalty">"works", "ok", "correct" → penalización</div>
+    </div>
+    <div class="score-row">
+      <div class="dim-name" style="color:var(--score)">Diversidad de títulos</div>
+      <div class="dim-peso">× 0.15</div>
+      <div class="dim-formula">min(words / n×3, 1.0)</div>
+      <div class="dim-penalty">Títulos repetitivos o genéricos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Retry strategy -->
+<div class="retry-section">
+  <div class="section-title" style="color:var(--validate)">
+    <span style="background:var(--validate)"></span>
+    Estrategia de retry — 2 capas independientes
+  </div>
+  <div class="retry-grid">
+
+    <div class="retry-box" style="border-color:#f59e0b30;background:#f59e0b06">
+      <div class="retry-box-title" style="color:var(--validate)">
+        <div class="rdot" style="background:var(--validate);box-shadow:0 0 6px var(--validate)"></div>
+        Layer 1 — Transporte
+      </div>
+      <div style="font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px">services/llm_client.py</div>
+      <div class="trigger">
+        <b>RateLimitError</b> → backoff exp.<br>
+        <b>APIConnectionError</b> → backoff exp.<br>
+        <b>asyncio.TimeoutError</b> → backoff exp.<br>
+        <b>APIStatusError ≥ 500</b> → backoff exp.<br>
+        <b>stop_reason = "length"</b> → repair()<br>
+        <b>JSONDecodeError</b> → repair o retry<br>
+        <span style="color:#ef4444"><b>APIStatusError 4xx</b> → LLMError (no retry)</span>
+      </div>
+      <div class="backoff-box" style="color:var(--validate)">
+        delay = min(2<sup>n</sup> + rand(0,1), 30s)<br>
+        <span style="color:var(--muted)">n=1 → ~2.5s · n=2 → ~4.5s · n=3 → ~8.5s</span>
+      </div>
+    </div>
+
+    <div class="retry-box" style="border-color:#f9731630;background:#f9731606">
+      <div class="retry-box-title" style="color:var(--orch)">
+        <div class="rdot" style="background:var(--orch);box-shadow:0 0 6px var(--orch)"></div>
+        Layer 2 — Estructural
+      </div>
+      <div style="font-family:'Syne Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px">services/generator.py</div>
+      <div class="trigger">
+        <b>missing "test_cases" key</b><br>
+        <b>test_cases is empty list</b><br>
+        <b>missing required fields:</b><br>
+        &nbsp; title · preconditions<br>
+        &nbsp; steps · expected_result<br>
+        <b>steps is not a list</b><br>
+        <br>
+        <span class="action" style="color:var(--orch)">→ reintenta LLM call completo</span><br>
+        <span class="action" style="color:var(--orch)">→ max MAX_RETRIES = 3 intentos</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- repair_truncated_json steps -->
+  <div class="repair-box">
+    <div class="repair-title">repair_truncated_json() — algoritmo 9 pasos (services/validator.py)</div>
+    <div class="repair-steps">
+      <div class="repair-step">
+        <div class="rs-num">1</div>
+        <div class="rs-text"><b>Strip backticks</b> — limpia ```json ... ``` del modelo</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">2</div>
+        <div class="rs-text"><b>Fast path</b> — json.loads() directo; si OK, retorna</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">3</div>
+        <div class="rs-text"><b>Strip string abierto</b> — elimina string literal incompleto al final</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">4</div>
+        <div class="rs-text"><b>Strip key sin valor</b> — e.g. <code>,"expected_result":</code></div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">5</div>
+        <div class="rs-text"><b>Strip key incompleta</b> — sin comilla de cierre</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">6</div>
+        <div class="rs-text"><b>Strip trailing commas</b> — antes de <code>}</code> o <code>]</code></div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">7</div>
+        <div class="rs-text"><b>Contar delimitadores</b> — ignora contenido de strings</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">8</div>
+        <div class="rs-text"><b>Cerrar estructuras</b> — añade <code>]</code> y <code>}</code> necesarios</div>
+      </div>
+      <div class="repair-step">
+        <div class="rs-num">9</div>
+        <div class="rs-text"><b>Parse final</b> — json.loads(); si falla → JSONDecodeError</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="ldot" style="background:var(--input)"></div>API / validación</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--orch)"></div>orquestación</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--llm)"></div>LLM client</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--repair)"></div>repair / recuperación</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--validate)"></div>validación estructural</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--score)"></div>scoring heurístico</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--obs)"></div>observabilidad</div>
+  <div class="legend-item"><div class="ldot" style="background:var(--prompt)"></div>config / prompts</div>
+</div>
+
+</body>
+</html>
